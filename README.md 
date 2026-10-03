@@ -1,0 +1,414 @@
+# NYC Yellow Taxi Data Analysis with Apache Hive
+
+## 📌 Project Overview
+
+This project analyzes **NYC Yellow Taxi trip data for January 2025** using Apache Hadoop and Apache Hive.
+
+The goal is to demonstrate a complete Big Data workflow, starting from a real-world dataset and ending with data cleaning, transformation, SQL analysis, and insights.
+
+---
+
+## 📊 Dataset
+
+The dataset contains NYC Yellow Taxi trip records for **January 2025**.
+
+Each record contains information such as:
+
+* Pickup and drop-off timestamps
+* Passenger count
+* Trip distance
+* Pickup and drop-off location IDs
+* Payment type
+* Fare amount
+* Tip amount
+* Total amount
+* Airport fee
+* Congestion-related fees
+
+### Source
+
+The dataset is provided by the **NYC Taxi & Limousine Commission (TLC)**.
+
+Official source:
+
+https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+
+The project uses:
+
+`yellow_tripdata_2025-01.parquet`
+
+---
+
+## 🛠️ Technologies Used
+
+* **Apache Hadoop 3.3.6**
+* **Apache Hive 4.0.1**
+* **HDFS**
+* **Apache Parquet**
+* **SQL**
+* **Python**
+* **Pandas**
+* **PyArrow**
+* **WSL2 / Ubuntu**
+
+---
+
+## 🏗️ Project Architecture
+
+The project follows this workflow:
+
+```text
+NYC TLC Dataset
+       ↓
+Parquet File
+       ↓
+HDFS
+       ↓
+Apache Hive
+       ↓
+External Hive Table
+       ↓
+Data Cleaning
+       ↓
+Cleaned Hive Table
+       ↓
+Taxi Zone Lookup
+       ↓
+JOIN Operations
+       ↓
+SQL Analysis
+       ↓
+Results & Insights
+```
+
+### Role of Each Technology
+
+**HDFS**
+
+Used as the distributed storage layer for the taxi dataset.
+
+**Parquet**
+
+Used as the columnar storage format for efficient analytical processing.
+
+**Hive**
+
+Used to query and analyze the data using SQL.
+
+**Python**
+
+Used to inspect the dataset before loading it into Hive and to prepare the taxi zone lookup file.
+
+---
+
+## 📁 Project Structure
+
+```text
+NYC-Taxi-Hive-Project/
+│
+├── data/
+│   ├── yellow_tripdata_2025-01.parquet
+│   │
+│   └── lookup/
+│       ├── taxi_zone_lookup.csv
+│       └── taxi_zone_clean.csv
+│
+├── python/
+│   └── inspect_data.py
+│
+├── sql/
+│   ├── create_tables.sql
+│   ├── cleaning.sql
+│   ├── create_lookup_table.sql
+│   └── analysis.sql
+│
+├── README.md
+│
+└── .gitignore
+```
+
+---
+
+## 🗄️ Hive Tables
+
+### 1. `yellow_taxi`
+
+External Hive table containing the original January 2025 taxi data stored as Parquet.
+
+The table contains **20 columns**.
+
+### 2. `yellow_taxi_cleaned`
+
+Hive table created after removing records that failed the basic data-quality rules.
+
+### 3. `taxi_zones_clean`
+
+Lookup table containing:
+
+* Location ID
+* Zone
+* Borough
+
+This table is used to convert `PULocationID` and `DOLocationID` into readable taxi zone names.
+
+---
+
+## 🧹 Data Cleaning
+
+The original dataset contained:
+
+**3,475,226 trips**
+
+The following basic quality rules were applied:
+
+```sql
+trip_distance > 0
+```
+
+```sql
+total_amount > 0
+```
+
+```sql
+tpep_dropoff_datetime >= tpep_pickup_datetime
+```
+
+After cleaning:
+
+**3,325,410 trips**
+
+Therefore:
+
+* Original rows: **3,475,226**
+* Cleaned rows: **3,325,410**
+* Removed rows: **149,816**
+* Removed percentage: **~4.31%**
+
+The cleaning process does not modify the original external table.
+
+---
+
+## 🔍 Data Quality Findings
+
+Several data-quality issues were investigated before cleaning.
+
+### Missing Passenger Count
+
+`passenger_count` contained NULL values.
+
+The NULL values were not removed because the project keeps them as part of the original data rather than making an unsupported assumption about their meaning.
+
+### Zero Trip Distance
+
+There were **90,893** records where:
+
+```text
+trip_distance = 0
+```
+
+These records were excluded from the cleaned analytical table.
+
+### Non-positive Total Amount
+
+There were **63,596** records where:
+
+```text
+total_amount <= 0
+```
+
+These records were excluded from the cleaned analytical table.
+
+### Invalid Timestamps
+
+There were **124** records where the drop-off timestamp occurred before the pickup timestamp.
+
+These records were excluded from the cleaned table.
+
+---
+
+## 📈 Analysis Performed
+
+The project performs several analytical queries using Hive.
+
+### 1. Overall Trip Statistics
+
+For the cleaned dataset:
+
+* Total trips: **3,325,410**
+* Average trip distance: **6.02 miles**
+* Average trip amount: **26.59**
+* Average passenger count: **1.30**
+
+---
+
+### 2. Trips by Payment Type
+
+The cleaned dataset was grouped by payment type to understand the distribution of recorded payment methods.
+
+The most common payment type in the cleaned dataset was:
+
+```text
+Payment Type 1
+```
+
+According to the TLC data dictionary, payment type `1` represents credit card.
+
+---
+
+### 3. Trips by Pickup Hour
+
+The number of recorded pickups was analyzed by hour.
+
+The highest number of recorded pickups occurred at:
+
+```text
+18:00
+```
+
+with:
+
+**242,350 trips**
+
+The lowest occurred at:
+
+```text
+04:00
+```
+
+with:
+
+**18,649 trips**
+
+These results describe recorded pickup activity and should not be interpreted directly as traffic congestion measurements.
+
+---
+
+### 4. Pickup and Drop-off Zones
+
+Taxi Zone IDs were joined with the lookup table to obtain readable zone names.
+
+This allowed the project to identify the zones with the highest number of recorded pickups and drop-offs.
+
+---
+
+### 5. Borough Analysis
+
+Trips were grouped by pickup borough.
+
+The cleaned dataset contained the following recorded pickup distribution:
+
+| Borough       |     Trips |
+| ------------- | --------: |
+| Manhattan     | 2,971,077 |
+| Queens        |   272,793 |
+| Brooklyn      |    60,315 |
+| Bronx         |    13,262 |
+| Staten Island |       218 |
+| EWR           |        77 |
+
+---
+
+### 6. Top Pickup-to-Drop-off Routes
+
+Pickup and drop-off zone IDs were joined twice with the taxi zone lookup table.
+
+This allowed the project to analyze the most frequently recorded routes.
+
+The highest-frequency route was:
+
+```text
+Upper East Side South → Upper East Side North
+```
+
+with:
+
+**24,476 trips**
+
+---
+
+## ⚠️ Outlier Investigation
+
+The analysis also investigated extreme values in `trip_distance`.
+
+The cleaned dataset contained:
+
+**158 trips with distance > 100 miles**
+
+and:
+
+**115 trips with distance > 1,000 miles**
+
+These extreme records have a significant effect on average-distance calculations.
+
+For example:
+
+```text
+Average distance including extreme values: 6.02 miles
+Average distance excluding trips > 1,000 miles: 3.17 miles
+```
+
+For this reason, extreme values were treated as a **data-quality finding** rather than automatically deleted from the cleaned dataset.
+
+---
+
+## 🚕 Borough Amount Analysis
+
+The project also calculates:
+
+* Number of trips
+* Average trip distance
+* Average trip amount
+* Sum of recorded `total_amount`
+
+by pickup borough.
+
+The `total_amount` values represent the amounts recorded in the dataset and should not automatically be interpreted as company net revenue.
+
+The unusually high average distances observed in some boroughs are affected by the extreme distance values identified during the outlier investigation.
+
+---
+
+## 🚀 Hadoop & Hive Processing
+
+The analytical queries were executed through Hive using Hadoop MapReduce.
+
+For example, the route analysis required multiple MapReduce stages:
+
+```text
+Stage 1 → MapReduce
+Stage 2 → MapReduce
+Stage 3 → MapReduce
+Stage 4 → MapReduce
+```
+
+This demonstrates how Hive translates SQL queries into distributed processing jobs executed through Hadoop.
+
+---
+
+## 🎯 Project Goals
+
+This project demonstrates practical experience with:
+
+* Big Data concepts
+* HDFS
+* Apache Hadoop
+* Apache Hive
+* HiveQL
+* External tables
+* Parquet
+* Data cleaning
+* Data-quality analysis
+* SQL aggregation
+* JOIN operations
+* MapReduce execution
+* Real-world transportation data
+
+---
+
+## 📌 Important Note
+
+The original Parquet dataset is large and is **not intended to be committed to GitHub**.
+
+The dataset can be downloaded from the official NYC TLC source listed above.
+
+The SQL scripts and Python code in this repository contain the processing and analysis workflow.

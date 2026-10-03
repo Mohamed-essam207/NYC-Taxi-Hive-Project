@@ -1,0 +1,20 @@
+# Large dataset
+
+data/*.parquet
+
+# Python cache
+
+**pycache**/
+*.pyc
+
+# Hive / Hadoop local files
+
+metastore_db/
+derby.log
+hadoopdata/
+
+# Temporary files
+
+*.tmp
+*.log
+.DS_Store
